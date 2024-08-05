@@ -2,15 +2,15 @@ import os
 from PIL import Image
 
 # Define the paths
-input_folder = 'data/imgs/'
-output_folder = 'data/imgs/resize'
+input_folder = 'food_dataset/segments/SegmentationObject'
+output_folder = 'food_dataset/segments/SegmentationObject/resize'
 
 # Create the output folder if it does not exist
 os.makedirs(output_folder, exist_ok=True)
 
 # Loop through each file in the input folder
 for filename in os.listdir(input_folder):
-    if filename.endswith('.jpg'):
+    if filename.endswith('.png'):
         # Open the image file
         image_path = os.path.join(input_folder, filename)
         image = Image.open(image_path)

@@ -20,7 +20,7 @@ from utils.data_loading import BasicDataset, CarvanaDataset
 from utils.dice_score import dice_loss
 
 dir_img = Path('./food_dataset/images')
-dir_mask = Path('./food_dataset/segments/SegmentationClass')
+dir_mask = Path('./food_dataset/segments/SegmentationClass/resize')
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -188,13 +188,15 @@ if __name__ == '__main__':
     args = get_args()
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
     logging.info(f'Using device {device}')
 
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
     model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    # model = UNet(n_channels=3, n_classes=13, bilinear=args.bilinear)
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
