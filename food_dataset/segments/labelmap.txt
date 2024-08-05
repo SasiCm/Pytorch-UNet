@@ -1,0 +1,15 @@
+# label:color_rgb:parts:actions
+background:0,0,0::
+carb:8,5,25::
+fried_chicken:51,221,255::
+kao_kaijeao:22,38,190::
+kao_mankai:89,134,179::
+kao_moogrob:52,209,183::
+mama:221,255,51::
+mama_noodle:36,179,83::
+meat:250,50,83::
+moogata:102,255,102::
+pizza:50,183,250::
+salmon:131,224,112::
+steak:255,106,77::
+vegetable:79,195,117::
