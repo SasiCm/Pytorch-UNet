@@ -11,6 +11,8 @@ from torchvision import transforms
 from utils.data_loading import BasicDataset
 from unet import UNet
 from utils.utils import plot_img_and_mask
+# from hubconf import unet_carvana
+from unet import UNet as _UNet
 
 def predict_img(net,
                 full_img,
@@ -84,13 +86,25 @@ if __name__ == '__main__':
     out_files = get_output_filenames(args)
 
     net = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    # net = UNet(n_channels=3, n_classes=2, bilinear=False)
+    # define model manual
+    pretrained = True
+    scale = 0.5
+    if pretrained:
+        if scale == 0.5:
+            checkpoint = 'https://github.com/milesial/Pytorch-UNet/releases/download/v3.0/unet_carvana_scale0.5_epoch2.pth'
+        elif scale == 1.0:
+            checkpoint = 'https://github.com/milesial/Pytorch-UNet/releases/download/v3.0/unet_carvana_scale1.0_epoch2.pth'
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model {args.model}')
     logging.info(f'Using device {device}')
 
+    # if 'mask_values' in state_dict:
+    #     state_dict.pop('mask_values')
     net.to(device=device)
-    state_dict = torch.load(args.model, map_location=device)
+    # state_dict = torch.load(args.model, map_location=device)
+    state_dict = torch.hub.load_state_dict_from_url(checkpoint, progress=True, map_location=device)
     mask_values = state_dict.pop('mask_values', [0, 1])
     net.load_state_dict(state_dict)
 
