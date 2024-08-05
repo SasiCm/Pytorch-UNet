@@ -12,7 +12,6 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
-import pandas as pd
 
 import wandb
 from evaluate import evaluate
@@ -52,9 +51,7 @@ def train_model(
 
     # 3. Create data loaders
     loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
-    # train_loader = DataLoader(train_set, shuffle=True, **loader_args)
-    # train_loader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0)
-    train_loader = DataLoader(train_set, batch_size=1, shuffle=True)
+    train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
     # (Initialize logging)
@@ -81,11 +78,9 @@ def train_model(
                               lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    # grad_scaler = torch.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
     global_step = 0
 
-    train_losses = []
     # 5. Begin training
     for epoch in range(1, epochs + 1):
         model.train()
@@ -102,42 +97,16 @@ def train_model(
                 images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
 
-                # Debugging prints
-                print(f"true_masks shape: {true_masks.shape}")
-                print(f"Unique values in true_masks: {true_masks.unique()}")
-                print(f"Minimum value in true_masks: {true_masks.min()}")
-                print(f"Maximum value in true_masks: {true_masks.max()}")
-
-                # Clean masks if necessary
-                true_masks = clean_masks(true_masks, model.n_classes)
-
-                # with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
-                #     print('torch.autocast')
-                #     masks_pred = model(images)
-                #     if model.n_classes == 1:
-                #         loss = criterion(masks_pred.squeeze(1), true_masks.float())
-                #         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
-                #         print('n_classes = 1',loss)
-                #     else:
-                #         loss = criterion(masks_pred, true_masks)
-                #         loss += dice_loss(
-                #             F.softmax(masks_pred, dim=1).float(),
-                #             F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                #             multiclass=True
-                #         )
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    
                     if model.n_classes == 1:
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
-                        # One-hot encoding for multi-class
-                        one_hot_masks = F.one_hot(true_masks, num_classes=model.n_classes).permute(0, 3, 1, 2).float()
                         loss = criterion(masks_pred, true_masks)
                         loss += dice_loss(
                             F.softmax(masks_pred, dim=1).float(),
-                            one_hot_masks,
+                            F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                             multiclass=True
                         )
 
@@ -147,6 +116,7 @@ def train_model(
                 torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping)
                 grad_scaler.step(optimizer)
                 grad_scaler.update()
+
                 pbar.update(images.shape[0])
                 global_step += 1
                 epoch_loss += loss.item()
@@ -155,9 +125,8 @@ def train_model(
                     'step': global_step,
                     'epoch': epoch
                 })
-                train_losses.append(loss.item())
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
-                print('before eval')
+
                 # Evaluation round
                 division_step = (n_train // (5 * batch_size))
                 if division_step > 0:
@@ -196,14 +165,7 @@ def train_model(
             state_dict['mask_values'] = dataset.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
-            
-    df = pd.DataFrame(train_losses, columns=['Loss'])
-    df.to_csv('loss_lists.csv', index=False)
 
-def clean_masks(masks, num_classes):
-    # Ensure that all mask values are within the range [0, num_classes-1]
-    masks = torch.clamp(masks, min=0, max=num_classes-1)
-    return masks
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
@@ -227,13 +189,11 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('cpu')
     logging.info(f'Using device {device}')
 
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    # model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     model = UNet(n_channels=3, n_classes=3, bilinear=args.bilinear)
     model = model.to(memory_format=torch.channels_last)
 
