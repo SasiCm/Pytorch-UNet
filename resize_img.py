@@ -2,8 +2,8 @@ import os
 from PIL import Image
 
 # Define the paths
-input_folder = 'food_dataset/segments/SegmentationObject'
-output_folder = 'food_dataset/segments/SegmentationObject/resize'
+input_folder = 'food_dataset/segments_new/SegmentationClass'
+output_folder = 'food_dataset/segments_new/SegmentationClass/resize'
 
 # Create the output folder if it does not exist
 os.makedirs(output_folder, exist_ok=True)
