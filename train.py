@@ -19,7 +19,7 @@ from unet import UNet
 from utils.data_loading import BasicDataset, CarvanaDataset
 from utils.dice_score import dice_loss
 
-dir_img = Path('./food_dataset/images/')
+dir_img = Path('./food_dataset/images')
 dir_mask = Path('./food_dataset/segments/SegmentationClass')
 dir_checkpoint = Path('./checkpoints/')
 
