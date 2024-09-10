@@ -8,3 +8,6 @@ venv/
 .idea/
 wandb/
 tensorboard_logfiles/*
+*.csv
+# *.jpg
+# *.png
